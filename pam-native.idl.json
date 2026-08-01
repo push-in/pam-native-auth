@@ -1,0 +1,12 @@
+{
+    "$schema": "vendor/pushinbr/pam-native-plugin-kit/resources/pam-native.idl.schema.json",
+    "version": 1,
+    "namespace": "Pam.Auth",
+    "enums": {
+        "AuthOperationState": {"Succeeded": 1, "NotFound": 2, "Denied": 3, "Failed": 4},
+        "CredentialAccessibility": {"AfterFirstUnlock": 1, "WhenUnlocked": 2, "DeviceOnly": 3}
+    },
+    "records": {
+        "CredentialMetadata": {"key": "string", "createdAt": "int", "updatedAt": "int"}
+    }
+}
