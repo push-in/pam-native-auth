@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__, 2).'/certification-app/vendor/autoload.php';
+require dirname(__DIR__).'/vendor/autoload.php';
 
 use Pam\Native\Auth\AuthOperationState;
 use Pam\Native\Auth\AuthVault;
