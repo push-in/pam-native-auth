@@ -76,7 +76,7 @@ Do not store user passwords. Store short-lived sessions or refresh tokens, rotat
 
 - Android 8.0+ (API 26): Android Keystore + AES-GCM.
 - iOS 15+: Security.framework Keychain.
-- PAM Native `0.8.x` plugin protocol 1.
+- PAM Native plugin protocol 1; current native certification uses SDK `1.0.16`. See Composer constraints for accepted versions.
 
 Passkeys and interactive OAuth authorization are deliberately separate from the vault because they require an app presentation context, associated domains, and server-side challenge verification. Those flows will be added only with end-to-end app lifecycle support.
 
@@ -91,6 +91,8 @@ Use `pam packages` to inspect availability and `pam remove auth` to uninstall th
 
 | API | Responsibility |
 | --- | --- |
+| `Biometrics` | Check availability and request system biometric authentication. |
+| `ScreenPrivacy` | Conceal protected content until the application explicitly authorizes reveal. |
 | `AuthVault` | Store, retrieve, and delete encrypted secrets. |
 | `Pkce` / `PkcePair` | Generate and verify OAuth 2.1 S256 PKCE material. |
 | `CredentialAccessibility` | Choose the native credential accessibility policy. |
@@ -115,7 +117,7 @@ All coded states, kinds, and variants are sequential integer-backed enums. Use e
 
 ## Compatibility and support
 
-This package targets PAM Native `0.8.x`, Android API 26+, and iOS 15+ unless a platform-specific section above states a stricter requirement. Platform SDKs, credentials, entitlements, physical hardware, and store configuration remain application responsibilities.
+This package supports PAM Native 1.x, Android API 26+, and iOS 15+ unless a platform-specific section above states a stricter requirement. Platform SDKs, credentials, entitlements, physical hardware, and store configuration remain application responsibilities.
 
 - [PAM documentation](https://push-in.github.io/pam-docs/introduction/)
 - [PAM Native overview](https://push-in.github.io/pam-docs/native/overview/)
@@ -123,3 +125,15 @@ This package targets PAM Native `0.8.x`, Android API 26+, and iOS 15+ unless a p
 - [Report an issue](https://github.com/push-in/pam-native-auth/issues)
 
 Security vulnerabilities should be reported through the repository security policy or GitHub private vulnerability reporting, not a public issue.
+
+## Biometric unlock and screen privacy
+
+`Biometrics` uses strong Android biometrics and biometric-only Apple LocalAuthentication. Results are explicit integer-backed enums; cancellation, unavailability, lockout, failure and concurrent requests never report authentication success.
+
+`ScreenPrivacy` keeps content covered after backgrounding until the application explicitly calls `reveal`. Android also blocks screenshots on the protected Activity and conceals accessibility content. iOS covers inactive scene windows; it does not prevent screenshots.
+
+These primitives do not implement an application session gate or cryptographically bind vault retrieval to biometric authentication. Gate credential access, request dispatch and navigation together; validate session expiry and revocation with your backend before revealing private content.
+
+- [Biometrics API](docs/biometrics.md)
+- [Screen privacy API and lifecycle](docs/screen-privacy.md)
+- [Native validation evidence and limitations](docs/native-validation.md)
