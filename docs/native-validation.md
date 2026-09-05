@@ -14,7 +14,7 @@ Android API 36 local instrumentation previously exercised a system fingerprint m
 
 ## Remaining coverage
 
-- iOS system-prompt cancellation, non-match and lockout interaction.
+- iOS lockout interaction and physical-device non-match behavior.
 - Older supported Android API levels and physical-device coverage.
 - Production app integration: vault/session gating, expiration/revocation, navigation on biometric failure, and foreground/background races.
 
@@ -25,3 +25,7 @@ Android API 36 additional instrumentation on 2026-09-05: `backgroundingCancelsPr
 Android API 36: `closedModuleCannotOpenAnotherPrompt` passed in the isolated host (one test, zero failures/skips). Calling close twice and then authentication/availability returns Unavailable; the disposed module cannot create a new prompt. Linkinpay was brought back to the foreground after instrumentation.
 
 Regression after the Android disposal fix: all three lifecycle instrumentation cases passed together on API 36 (3 tests, 0 failures/errors/skips): closed-instance rejection, concurrent-request rejection with exactly-once cancellation, and cancellation on backgrounding. Report captured locally in `/tmp/pam-biometric-lifecycle.log`.
+
+## iOS cancellation verified
+
+Run [33942786380](https://github.com/push-in/pam-native-auth/actions/runs/33942786380), commit `e28cc1f`, passed all three native tests and all three host UI tests. Simulated biometric non-matches expose the SpringBoard “Face Not Recognized” alert; explicitly tapping its Cancel button produces Cancelled (state 2), never Authenticated. Background privacy and simulated successful authentication also passed in that run. This is simulator evidence, not physical-device or lockout certification.
