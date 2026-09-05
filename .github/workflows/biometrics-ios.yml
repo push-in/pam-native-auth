@@ -67,3 +67,19 @@ jobs:
           xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/PamAuthHost" CODE_SIGNING_ALLOWED=NO build
+      - name: Launch certification host and capture visible content
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          test -n "${simulator_id}"
+          xcrun simctl bootstatus "$simulator_id" -b
+          xcrun simctl install "$simulator_id" "$RUNNER_TEMP/PamAuthHost/Build/Products/Debug-iphonesimulator/PamAuthHost.app"
+          xcrun simctl launch "$simulator_id" dev.pam.auth.certification.ios
+          sleep 3
+          xcrun simctl io "$simulator_id" screenshot "$RUNNER_TEMP/ios-privacy-host.png"
+      - name: Upload certification screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-privacy-host
+          path: ${{ runner.temp }}/ios-privacy-host.png
+          if-no-files-found: error
+          retention-days: 7

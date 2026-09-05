@@ -15,7 +15,7 @@ def add(name, value):
 source = add('PBXFileReference', {'lastKnownFileType': 'sourcecode.swift', 'path': 'App.swift', 'sourceTree': '<group>'})
 product = add('PBXFileReference', {'explicitFileType': 'wrapper.application', 'path': 'PamAuthHost.app', 'sourceTree': 'BUILT_PRODUCTS_DIR'})
 package = add('XCLocalSwiftPackageReference', {'relativePath': '../certification'})
-dependency = add('XCSwiftPackageProductDependency', {'productName': 'PamAuth'})
+dependency = add('XCSwiftPackageProductDependency', {'productName': 'PamAuth', 'package': package})
 source_build = add('PBXBuildFile', {'fileRef': source})
 framework_build = add('PBXBuildFile', {'productRef': dependency})
 sources = add('PBXSourcesBuildPhase', {'buildActionMask': 2147483647, 'files': [source_build], 'runOnlyForDeploymentPostprocessing': 0})
