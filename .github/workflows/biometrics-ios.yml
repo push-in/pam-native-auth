@@ -83,3 +83,9 @@ jobs:
           path: ${{ runner.temp }}/ios-privacy-host.png
           if-no-files-found: error
           retention-days: 7
+      - name: Verify privacy across real app background and foreground
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" CODE_SIGNING_ALLOWED=NO test

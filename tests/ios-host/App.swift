@@ -16,6 +16,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private let privacy = ScreenPrivacyModule()
     private let biometrics = BiometricsModule()
     private let result = UILabel()
+    private var firstActivation = true
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options: UIScene.ConnectionOptions) {
         guard let scene = scene as? UIWindowScene else { return }
@@ -43,6 +44,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        if !firstActivation && ProcessInfo.processInfo.arguments.contains("--keep-covered-on-return") { return }
+        firstActivation = false
         // Fixture only: explicitly reveal so UI tests can trigger the system prompt.
         // Production applications must authorize this via their session gate.
         privacy.invoke(method: "conceal", payload: try! WireMap.encode([:])) { [weak self] _, _ in
