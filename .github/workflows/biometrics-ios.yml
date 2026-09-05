@@ -24,6 +24,9 @@ jobs:
         run: |
           mkdir -p certification/Sources/PamAuth
           cp plugin/ios/Sources/*.swift certification/Sources/PamAuth/
+          cp -R sdk/ios/Sources/PamNativeTestRuntimeShims certification/Sources/RuntimeShims
+          mkdir -p certification/Tests/PamAuthTests
+          cp plugin/tests/ios/*.swift certification/Tests/PamAuthTests/
           cat > certification/Package.swift <<'SWIFT'
           // swift-tools-version: 5.9
           import PackageDescription
@@ -36,6 +39,10 @@ jobs:
                   name: "PamAuth",
                   dependencies: [.product(name: "PamNative", package: "ios")],
                   linkerSettings: [.linkedFramework("Security"), .linkedFramework("LocalAuthentication")]
+              ), .target(
+                  name: "RuntimeShims", publicHeadersPath: "include"
+              ), .testTarget(
+                  name: "PamAuthTests", dependencies: ["PamAuth", "RuntimeShims"]
               )]
           )
           SWIFT
@@ -45,3 +52,12 @@ jobs:
           xcodebuild -scheme PamAuth -configuration Release
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO build
+      - name: Test biometric bridge on iOS Simulator
+        working-directory: certification
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          test -n "${simulator_id}"
+          xcodebuild -scheme PamAuth \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -resultBundlePath "${RUNNER_TEMP}/PamAuth.xcresult" \
+            CODE_SIGNING_ALLOWED=NO test
