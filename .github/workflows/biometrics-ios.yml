@@ -111,6 +111,12 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" \
             -only-testing:PamAuthHostUITests/PrivacyUITests/testSystemBiometricsCancellationDoesNotAuthenticate \
             ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO test
+      - name: Export cancellation screenshots
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" --output-path "$RUNNER_TEMP/cancellation-attachments"
+          fi
       - name: Preserve native test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,5 +126,6 @@ jobs:
             ${{ runner.temp }}/PamAuth.xcresult
             ${{ runner.temp }}/PamAuthHost-UI.xcresult
             ${{ runner.temp }}/PamAuthHost-Cancel.xcresult
+            ${{ runner.temp }}/cancellation-attachments
           if-no-files-found: warn
           retention-days: 7

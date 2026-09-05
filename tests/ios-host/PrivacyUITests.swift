@@ -26,14 +26,20 @@ final class PrivacyUITests: XCTestCase {
         let authenticate = app.buttons["authenticate"]
         XCTAssertTrue(authenticate.waitForExistence(timeout: 10))
         authenticate.tap()
-        let cancel = app.buttons["Cancel"]
-        let systemCancel = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Cancel"]
-        if cancel.waitForExistence(timeout: 5) {
-            cancel.tap()
-        } else {
-            XCTAssertTrue(systemCancel.waitForExistence(timeout: 5))
-            systemCancel.tap()
+        let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let authentication = XCUIApplication(bundleIdentifier: "com.apple.CoreAuthUI")
+        let candidates = [app.buttons["Cancel"], authentication.buttons["Cancel"], system.buttons["Cancel"]]
+        guard let cancel = candidates.first(where: { $0.waitForExistence(timeout: 5) }) else {
+            print("APP HIERARCHY: \(app.debugDescription)")
+            print("AUTH HIERARCHY: \(authentication.debugDescription)")
+            print("SYSTEM HIERARCHY: \(system.debugDescription)")
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            XCTFail("System biometric cancel control was not found")
+            return
         }
+        cancel.tap()
         let result = app.staticTexts["result"]
         expectation(for: NSPredicate(format: "label == %@", "Biometric result: 2"), evaluatedWith: result)
         waitForExpectations(timeout: 10)
