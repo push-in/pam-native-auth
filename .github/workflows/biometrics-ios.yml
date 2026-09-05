@@ -98,4 +98,15 @@ jobs:
           trap 'kill "$biometric_sender" 2>/dev/null || true' EXIT
           xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
             -destination "platform=iOS Simulator,id=${simulator_id}" \
-            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" CODE_SIGNING_ALLOWED=NO test
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
+            -resultBundlePath "$RUNNER_TEMP/PamAuthHost-UI.xcresult" CODE_SIGNING_ALLOWED=NO test
+      - name: Preserve native test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-native-test-results
+          path: |
+            ${{ runner.temp }}/PamAuth.xcresult
+            ${{ runner.temp }}/PamAuthHost-UI.xcresult
+          if-no-files-found: warn
+          retention-days: 7
