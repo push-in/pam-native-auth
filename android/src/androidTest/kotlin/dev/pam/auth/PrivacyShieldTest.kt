@@ -22,8 +22,6 @@ class PrivacyShieldTest {
                         elevation = Float.MAX_VALUE / 2
                     }, android.view.ViewGroup.LayoutParams(-1, -1)
                 )
-                shield = PrivacyShield(activity)
-                assertTrue(shield.reveal())
             }
             instrumentation.waitForIdleSync()
             fun centerPixel(): Int {
@@ -42,6 +40,30 @@ class PrivacyShieldTest {
                 assertEquals(expected, actual)
             }
             awaitPixel(android.graphics.Color.RED)
+            scenario.onActivity { activity ->
+                shield = PrivacyShield(activity)
+                assertTrue(shield.reveal())
+            }
+            instrumentation.waitForIdleSync()
+            instrumentation.uiAutomation.executeShellCommand("input keyevent 187").close()
+            android.os.SystemClock.sleep(1500)
+            val recents = instrumentation.uiAutomation.takeScreenshot()
+            val context = instrumentation.targetContext
+            java.io.File(context.cacheDir, "privacy-recents.png").outputStream().use {
+                recents.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
+            var exposed = 0
+            for (y in 0 until recents.height step 4) {
+                for (x in 0 until recents.width step 4) {
+                    val color = recents.getPixel(x, y)
+                    if (android.graphics.Color.red(color) > 200 && android.graphics.Color.green(color) < 40 && android.graphics.Color.blue(color) < 40) exposed++
+                }
+            }
+            recents.recycle()
+            instrumentation.uiAutomation.executeShellCommand("input keyevent 4").close()
+            instrumentation.waitForIdleSync()
+            assertEquals("App switcher must not expose the reference content", 0, exposed)
+            scenario.moveToState(Lifecycle.State.RESUMED)
             scenario.onActivity { shield.conceal() }
             instrumentation.waitForIdleSync()
             awaitPixel(android.graphics.Color.BLACK)

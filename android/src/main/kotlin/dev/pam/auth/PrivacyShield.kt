@@ -1,6 +1,8 @@
 package dev.pam.auth
 
 import android.graphics.Color
+import android.os.Build
+import android.view.WindowManager
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +28,9 @@ internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLi
 
     init {
         checkMainThread()
+        // The system may capture recents before onPause draws the cover.
+        if (Build.VERSION.SDK_INT >= 33) activity.setRecentsScreenshotEnabled(false)
+        activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         root.addView(cover, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         activity.lifecycle.addObserver(this)
         conceal()
