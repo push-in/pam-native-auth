@@ -1,5 +1,6 @@
 package dev.pam.auth
 
+import androidx.lifecycle.Lifecycle
 import androidx.biometric.BiometricManager
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -52,6 +53,30 @@ class BiometricsModuleTest {
             }
             assertTrue(completed.await(5, TimeUnit.SECONDS))
             assertTrue(busy.await(5, TimeUnit.SECONDS))
+            assertEquals(1, calls.get())
+        }
+    }
+
+    @Test
+    fun backgroundingCancelsPromptOnce() {
+        assumeTrue(BiometricManager.from(ApplicationProvider.getApplicationContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS)
+        val completed = CountDownLatch(1)
+        val calls = AtomicInteger()
+        var result: WireValue? = null
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                BiometricsModule(activity).invoke("authenticate", payload) { _, data ->
+                    calls.incrementAndGet()
+                    result = WireMap.decode(data)["state"]
+                    completed.countDown()
+                }
+            }
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            scenario.moveToState(Lifecycle.State.CREATED)
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(WireValue.Integer(2), result)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
             assertEquals(1, calls.get())
         }
     }
