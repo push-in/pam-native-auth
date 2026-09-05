@@ -26,20 +26,12 @@ final class PrivacyUITests: XCTestCase {
         let authenticate = app.buttons["authenticate"]
         XCTAssertTrue(authenticate.waitForExistence(timeout: 10))
         authenticate.tap()
-        let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let authentication = XCUIApplication(bundleIdentifier: "com.apple.CoreAuthUI")
-        let candidates = [app.buttons["Cancel"], authentication.buttons["Cancel"], system.buttons["Cancel"]]
-        guard let cancel = candidates.first(where: { $0.waitForExistence(timeout: 5) }) else {
-            print("APP HIERARCHY: \(app.debugDescription)")
-            print("AUTH HIERARCHY: \(authentication.debugDescription)")
-            print("SYSTEM HIERARCHY: \(system.debugDescription)")
-            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-            screenshot.lifetime = .keepAlways
-            add(screenshot)
-            XCTFail("System biometric cancel control was not found")
-            return
-        }
-        cancel.tap()
+        let prompt = authentication.otherElements["authentication_ui"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
+        // Face ID's scanning overlay has no Cancel button on this simulator.
+        // Exercise the user's dismissal gesture outside its central panel.
+        authentication.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
         let result = app.staticTexts["result"]
         expectation(for: NSPredicate(format: "label == %@", "Biometric result: 2"), evaluatedWith: result)
         waitForExpectations(timeout: 10)
