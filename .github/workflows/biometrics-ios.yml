@@ -105,6 +105,14 @@ jobs:
       - name: Verify system biometric cancellation without simulated matches
         run: |
           simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          (
+            while true; do
+              xcrun simctl spawn "$simulator_id" notifyutil -p com.apple.BiometricKit_Sim.fingerTouch.nomatch
+              sleep 3
+            done
+          ) &
+          biometric_sender=$!
+          trap 'kill "$biometric_sender" 2>/dev/null || true' EXIT
           xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
             -destination "platform=iOS Simulator,id=${simulator_id}" \
             -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
