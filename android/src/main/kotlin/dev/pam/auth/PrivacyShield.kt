@@ -8,12 +8,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 
 /** A native cover. Removing it requires an explicit foreground authorization. */
-internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLifecycleObserver, AutoCloseable {
+internal class PrivacyShield(private val activity: FragmentActivity) : LifecycleEventObserver, AutoCloseable {
     private val root = activity.window.decorView as ViewGroup
     private val cover = FrameLayout(activity).apply {
         setBackgroundColor(Color.BLACK)
@@ -57,9 +57,13 @@ internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLi
         return true
     }
 
-    override fun onPause(owner: LifecycleOwner) = conceal()
-    override fun onStop(owner: LifecycleOwner) = conceal()
-    override fun onDestroy(owner: LifecycleOwner) = close()
+    override fun onStateChanged(owner: LifecycleOwner, event: Lifecycle.Event) {
+        when (event) {
+            Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> conceal()
+            Lifecycle.Event.ON_DESTROY -> close()
+            else -> Unit
+        }
+    }
 
     override fun close() {
         checkMainThread()

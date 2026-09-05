@@ -7,7 +7,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import dev.pam.nativeapp.modules.ModuleCompletion
@@ -60,7 +60,7 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
         require(reason.isNotBlank() && reason.toByteArray().size <= 256)
         require(cancelLabel.isNotBlank() && cancelLabel.toByteArray().size <= 256)
         var finished = false
-        var observer: DefaultLifecycleObserver? = null
+        var observer: LifecycleEventObserver? = null
         fun finish(result: Result) {
             if (finished) return
             finished = true
@@ -80,8 +80,10 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
             }
         })
         val cancel = { finish(Result.CANCELLED); prompt.cancelAuthentication() }
-        observer = object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) = cancel()
+        observer = object : LifecycleEventObserver {
+            override fun onStateChanged(owner: LifecycleOwner, event: Lifecycle.Event) {
+                if (event == Lifecycle.Event.ON_STOP) cancel()
+            }
         }
         activity.lifecycle.addObserver(observer)
         cancelActive = cancel
