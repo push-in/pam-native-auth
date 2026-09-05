@@ -26,6 +26,11 @@
             "LockedOut": 4,
             "Failed": 5,
             "Busy": 6
+        },
+        "ScreenPrivacyResult": {
+            "Concealed": 1,
+            "Revealed": 2,
+            "Failed": 3
         }
     },
     "records": {
