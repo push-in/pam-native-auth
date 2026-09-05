@@ -37,7 +37,7 @@ jobs:
               dependencies: [.package(path: "../sdk/ios")],
               targets: [.target(
                   name: "PamAuth",
-                  dependencies: [.product(name: "PamNative", package: "ios")],
+                  dependencies: [.product(name: "PamNative", package: "ios"), "RuntimeShims"],
                   linkerSettings: [.linkedFramework("Security"), .linkedFramework("LocalAuthentication")]
               ), .target(
                   name: "RuntimeShims", publicHeadersPath: "include"
@@ -61,3 +61,9 @@ jobs:
             -destination "platform=iOS Simulator,id=${simulator_id}" \
             -resultBundlePath "${RUNNER_TEMP}/PamAuth.xcresult" \
             CODE_SIGNING_ALLOWED=NO test
+      - name: Build interactive certification host
+        run: |
+          python3 plugin/tests/ios-host/generate-project.py
+          xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" CODE_SIGNING_ALLOWED=NO build
