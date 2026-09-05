@@ -11,6 +11,45 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PrivacyShieldTest {
     @Test
+    fun nativeCoverObscuresRenderedWindowPixels() {
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            lateinit var shield: PrivacyShield
+            scenario.onActivity { activity ->
+                (activity.window.decorView as android.view.ViewGroup).addView(
+                    android.view.View(activity).apply {
+                        setBackgroundColor(android.graphics.Color.RED)
+                        elevation = Float.MAX_VALUE / 2
+                    }, android.view.ViewGroup.LayoutParams(-1, -1)
+                )
+                shield = PrivacyShield(activity)
+                assertTrue(shield.reveal())
+            }
+            instrumentation.waitForIdleSync()
+            fun centerPixel(): Int {
+                val screenshot = instrumentation.uiAutomation.takeScreenshot()
+                assertNotNull(screenshot)
+                return screenshot.getPixel(screenshot.width / 2, screenshot.height / 2).also { screenshot.recycle() }
+            }
+            fun awaitPixel(expected: Int) {
+                val deadline = android.os.SystemClock.uptimeMillis() + 5000
+                var actual: Int
+                do {
+                    actual = centerPixel()
+                    if (actual == expected) return
+                    android.os.SystemClock.sleep(50)
+                } while (android.os.SystemClock.uptimeMillis() < deadline)
+                assertEquals(expected, actual)
+            }
+            awaitPixel(android.graphics.Color.RED)
+            scenario.onActivity { shield.conceal() }
+            instrumentation.waitForIdleSync()
+            awaitPixel(android.graphics.Color.BLACK)
+            scenario.onActivity { shield.close() }
+        }
+    }
+
+    @Test
     fun missingActivityCannotAuthorizeDisplay() {
         val complete = java.util.concurrent.CountDownLatch(1)
         ScreenPrivacyModule(androidx.test.core.app.ApplicationProvider.getApplicationContext()).invoke(
