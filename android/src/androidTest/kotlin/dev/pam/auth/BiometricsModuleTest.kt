@@ -22,6 +22,27 @@ class BiometricsModuleTest {
     private val payload = WireMap.encode(mapOf("reason" to WireValue.Text("PAM biometric certification"), "cancelLabel" to WireValue.Text("Cancel test")))
 
     @Test
+    fun closedModuleCannotOpenAnotherPrompt() {
+        val completed = CountDownLatch(2)
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val module = BiometricsModule(activity)
+                module.close()
+                module.close()
+                for (method in listOf("authenticate", "availability")) {
+                    module.invoke(method, payload) { status, data ->
+                        assertEquals(ModuleResultStatus.SUCCESS, status)
+                        val key = if (method == "availability") "availability" else "state"
+                        assertEquals(WireValue.Integer(3), WireMap.decode(data)[key])
+                        completed.countDown()
+                    }
+                }
+            }
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
     fun applicationContextCannotAuthenticate() {
         val completed = CountDownLatch(1)
         BiometricsModule(ApplicationProvider.getApplicationContext()).invoke("authenticate", payload) { status, data ->

@@ -18,10 +18,16 @@ import dev.pam.nativeapp.protocol.WireValue
 
 class BiometricsModule(private val context: Context) : NativeModule, AutoCloseable {
     private val main = Handler(Looper.getMainLooper())
+    private var closed = false
     private var cancelActive: (() -> Unit)? = null
 
     override fun invoke(method: String, payload: ByteArray, completion: ModuleCompletion) {
         main.post {
+            if (closed) {
+                if (method == "availability") complete(completion, "availability", Availability.UNAVAILABLE.code)
+                else complete(completion, "state", Result.UNAVAILABLE.code)
+                return@post
+            }
             try {
                 val values = WireMap.decode(payload)
                 when (method) {
@@ -89,7 +95,7 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
         } catch (_: Exception) { finish(Result.FAILED) }
     }
 
-    override fun close() { main.post { cancelActive?.invoke() } }
+    override fun close() { main.post { closed = true; cancelActive?.invoke() } }
 
     private fun complete(completion: ModuleCompletion, key: String, value: Long) {
         completion.complete(ModuleResultStatus.SUCCESS, WireMap.encode(mapOf(key to WireValue.Integer(value))))

@@ -21,3 +21,5 @@ Android API 36 local instrumentation previously exercised a system fingerprint m
 Passing isolated library tests does not establish that an application's session gate is implemented or secure.
 
 Android API 36 additional instrumentation on 2026-09-05: `backgroundingCancelsPromptOnce` passed (one test, zero skipped). A pending enrolled-biometric request is cancelled when its Activity stops; returning to RESUMED does not deliver a second callback. Tested in the isolated plugin host; Linkinpay dev app was reopened afterward.
+
+Android API 36: `closedModuleCannotOpenAnotherPrompt` passed in the isolated host (one test, zero failures/skips). Calling close twice and then authentication/availability returns Unavailable; the disposed module cannot create a new prompt. Linkinpay was brought back to the foreground after instrumentation.
