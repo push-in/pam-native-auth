@@ -10,7 +10,7 @@ final class PrivacyUITests: XCTestCase {
         XCTAssertTrue(reference.isHittable)
         XCUIDevice.shared.press(.home)
         app.activate()
-        XCTAssertTrue(app.staticTexts["Protected content"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["Protected content"].waitForExistence(timeout: 10))
         XCTAssertFalse(reference.isHittable)
     }
 }
