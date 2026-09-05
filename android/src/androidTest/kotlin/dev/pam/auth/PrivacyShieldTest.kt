@@ -72,6 +72,24 @@ class PrivacyShieldTest {
     }
 
     @Test
+    fun concealedContentIsRemovedFromAccessibilityAndRestored() {
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val content = (activity.window.decorView as android.view.ViewGroup).getChildAt(0)
+                val original = content.importantForAccessibility
+                val shield = PrivacyShield(activity)
+                assertEquals(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS, content.importantForAccessibility)
+                assertTrue(shield.reveal())
+                assertEquals(original, content.importantForAccessibility)
+                shield.conceal()
+                assertEquals(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS, content.importantForAccessibility)
+                shield.close()
+                assertEquals(original, content.importantForAccessibility)
+            }
+        }
+    }
+
+    @Test
     fun missingActivityCannotAuthorizeDisplay() {
         val complete = java.util.concurrent.CountDownLatch(1)
         ScreenPrivacyModule(androidx.test.core.app.ApplicationProvider.getApplicationContext()).invoke(

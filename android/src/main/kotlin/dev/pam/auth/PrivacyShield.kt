@@ -23,6 +23,10 @@ internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLi
         contentDescription = "Protected content"
         elevation = Float.MAX_VALUE
     }
+    private val accessibility = java.util.WeakHashMap<View, Int>()
+    private val layoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+        if (concealed) hideContentAccessibility()
+    }
     private var closed = false
     val concealed: Boolean get() = !closed && cover.visibility == View.VISIBLE
 
@@ -32,6 +36,7 @@ internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLi
         if (Build.VERSION.SDK_INT >= 33) activity.setRecentsScreenshotEnabled(false)
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         root.addView(cover, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        root.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
         activity.lifecycle.addObserver(this)
         conceal()
     }
@@ -41,11 +46,13 @@ internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLi
         if (closed) return
         cover.visibility = View.VISIBLE
         cover.bringToFront()
+        hideContentAccessibility()
     }
 
     fun reveal(): Boolean {
         checkMainThread()
         if (closed || !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return false
+        restoreContentAccessibility()
         cover.visibility = View.GONE
         return true
     }
@@ -59,7 +66,23 @@ internal class PrivacyShield(private val activity: FragmentActivity) : DefaultLi
         if (closed) return
         closed = true
         activity.lifecycle.removeObserver(this)
+        root.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
+        restoreContentAccessibility()
         root.removeView(cover)
+    }
+
+    private fun hideContentAccessibility() {
+        for (index in 0 until root.childCount) {
+            val child = root.getChildAt(index)
+            if (child === cover) continue
+            if (!accessibility.containsKey(child)) accessibility[child] = child.importantForAccessibility
+            child.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        }
+    }
+
+    private fun restoreContentAccessibility() {
+        for ((view, importance) in accessibility) view.importantForAccessibility = importance
+        accessibility.clear()
     }
 
     private fun checkMainThread() = check(Looper.myLooper() == Looper.getMainLooper()) {

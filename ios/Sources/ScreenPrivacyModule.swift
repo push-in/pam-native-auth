@@ -78,6 +78,8 @@ private final class PrivacyShield {
             cover.windowLevel = UIWindow.Level(rawValue: UIWindow.Level.alert.rawValue + 1)
             let controller = UIViewController()
             controller.view.backgroundColor = .black
+            cover.accessibilityViewIsModal = true
+            controller.view.accessibilityViewIsModal = true
             controller.view.isAccessibilityElement = true
             controller.view.accessibilityLabel = "Protected content"
             cover.rootViewController = controller
