@@ -35,3 +35,7 @@ jobs:
           else
             composer test
           fi
+      - name: Verify biometric bridge contracts
+        run: php tests/biometrics.php
+      - name: Verify screen privacy bridge contracts
+        run: php tests/screen-privacy.php

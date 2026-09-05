@@ -3,10 +3,41 @@
     "version": 1,
     "namespace": "Pam.Auth",
     "enums": {
-        "AuthOperationState": {"Succeeded": 1, "NotFound": 2, "Denied": 3, "Failed": 4},
-        "CredentialAccessibility": {"AfterFirstUnlock": 1, "WhenUnlocked": 2, "DeviceOnly": 3}
+        "AuthOperationState": {
+            "Succeeded": 1,
+            "NotFound": 2,
+            "Denied": 3,
+            "Failed": 4
+        },
+        "CredentialAccessibility": {
+            "AfterFirstUnlock": 1,
+            "WhenUnlocked": 2,
+            "DeviceOnly": 3
+        },
+        "BiometricAvailability": {
+            "Available": 1,
+            "NotEnrolled": 2,
+            "Unavailable": 3
+        },
+        "BiometricResult": {
+            "Authenticated": 1,
+            "Cancelled": 2,
+            "Unavailable": 3,
+            "LockedOut": 4,
+            "Failed": 5,
+            "Busy": 6
+        },
+        "ScreenPrivacyResult": {
+            "Concealed": 1,
+            "Revealed": 2,
+            "Failed": 3
+        }
     },
     "records": {
-        "CredentialMetadata": {"key": "string", "createdAt": "int", "updatedAt": "int"}
+        "CredentialMetadata": {
+            "key": "string",
+            "createdAt": "int",
+            "updatedAt": "int"
+        }
     }
 }

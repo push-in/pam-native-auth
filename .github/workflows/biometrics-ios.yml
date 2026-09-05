@@ -1,0 +1,139 @@
+name: Biometric iOS compatibility
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: plugin
+      - uses: actions/checkout@v5
+        with:
+          repository: push-in/pam-native
+          ref: v1.0.16
+          path: sdk
+      - name: Prepare isolated plugin package
+        run: |
+          mkdir -p certification/Sources/PamAuth
+          cp plugin/ios/Sources/*.swift certification/Sources/PamAuth/
+          cp -R sdk/ios/Sources/PamNativeTestRuntimeShims certification/Sources/RuntimeShims
+          mkdir -p certification/Tests/PamAuthTests
+          cp plugin/tests/ios/*.swift certification/Tests/PamAuthTests/
+          cat > certification/Package.swift <<'SWIFT'
+          // swift-tools-version: 5.9
+          import PackageDescription
+          let package = Package(
+              name: "PamAuth",
+              platforms: [.iOS(.v15)],
+              products: [.library(name: "PamAuth", targets: ["PamAuth"])],
+              dependencies: [.package(path: "../sdk/ios")],
+              targets: [.target(
+                  name: "PamAuth",
+                  dependencies: [.product(name: "PamNative", package: "ios"), "RuntimeShims"],
+                  linkerSettings: [.linkedFramework("Security"), .linkedFramework("LocalAuthentication")]
+              ), .target(
+                  name: "RuntimeShims", publicHeadersPath: "include"
+              ), .testTarget(
+                  name: "PamAuthTests", dependencies: ["PamAuth", "RuntimeShims"]
+              )]
+          )
+          SWIFT
+      - name: Compile plugin against published SDK
+        working-directory: certification
+        run: >-
+          xcodebuild -scheme PamAuth -configuration Release
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build
+      - name: Test biometric bridge on iOS Simulator
+        working-directory: certification
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          test -n "${simulator_id}"
+          xcodebuild -scheme PamAuth \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -resultBundlePath "${RUNNER_TEMP}/PamAuth.xcresult" \
+            CODE_SIGNING_ALLOWED=NO test
+      - name: Build interactive certification host
+        run: |
+          python3 plugin/tests/ios-host/generate-project.py
+          xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" CODE_SIGNING_ALLOWED=NO build
+      - name: Launch certification host and capture visible content
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          test -n "${simulator_id}"
+          xcrun simctl bootstatus "$simulator_id" -b
+          xcrun simctl install "$simulator_id" "$RUNNER_TEMP/PamAuthHost/Build/Products/Debug-iphonesimulator/PamAuthHost.app"
+          xcrun simctl launch "$simulator_id" dev.pam.auth.certification.ios
+          sleep 3
+          xcrun simctl io "$simulator_id" screenshot "$RUNNER_TEMP/ios-privacy-host.png"
+      - name: Upload certification screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-privacy-host
+          path: ${{ runner.temp }}/ios-privacy-host.png
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify privacy across real app background and foreground
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          xcrun simctl spawn "$simulator_id" notifyutil -s com.apple.BiometricKit.enrollmentChanged 1
+          xcrun simctl spawn "$simulator_id" notifyutil -p com.apple.BiometricKit.enrollmentChanged
+          (
+            while true; do
+              xcrun simctl spawn "$simulator_id" notifyutil -p com.apple.BiometricKit_Sim.fingerTouch.match
+              sleep 1
+            done
+          ) &
+          biometric_sender=$!
+          trap 'kill "$biometric_sender" 2>/dev/null || true' EXIT
+          xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
+            -resultBundlePath "$RUNNER_TEMP/PamAuthHost-UI.xcresult" \
+            -skip-testing:PamAuthHostUITests/PrivacyUITests/testSystemBiometricsCancellationDoesNotAuthenticate \
+            ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO test
+      - name: Verify system biometric cancellation without simulated matches
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          (
+            while true; do
+              xcrun simctl spawn "$simulator_id" notifyutil -p com.apple.BiometricKit_Sim.fingerTouch.nomatch
+              sleep 3
+            done
+          ) &
+          biometric_sender=$!
+          trap 'kill "$biometric_sender" 2>/dev/null || true' EXIT
+          xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
+            -resultBundlePath "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" \
+            -only-testing:PamAuthHostUITests/PrivacyUITests/testSystemBiometricsCancellationDoesNotAuthenticate \
+            ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO test
+      - name: Export cancellation screenshots
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" --output-path "$RUNNER_TEMP/cancellation-attachments"
+          fi
+      - name: Preserve native test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-native-test-results
+          path: |
+            ${{ runner.temp }}/PamAuth.xcresult
+            ${{ runner.temp }}/PamAuthHost-UI.xcresult
+            ${{ runner.temp }}/PamAuthHost-Cancel.xcresult
+            ${{ runner.temp }}/cancellation-attachments
+          if-no-files-found: warn
+          retention-days: 7

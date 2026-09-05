@@ -2,19 +2,57 @@
     "$schema": "vendor/pushinbr/pam-native/resources/pam-native.plugin.schema.json",
     "version": 1,
     "protocol": 1,
-    "pamNative": {"minimum":"0.8.0", "maximumExclusive": "2.0.0"},
-    "php": {"provider": "Pam\\Native\\Auth\\AuthPluginProvider"},
+    "pamNative": {
+        "minimum": "0.8.0",
+        "maximumExclusive": "2.0.0"
+    },
+    "php": {
+        "provider": "Pam\\Native\\Auth\\AuthPluginProvider"
+    },
     "android": {
         "namespace": "dev.pam.auth",
         "minSdk": 26,
-        "sourceDirs": ["android/src/main/kotlin"]
+        "sourceDirs": [
+            "android/src/main/kotlin"
+        ],
+        "dependencies": [
+            "androidx.biometric:biometric:1.1.0"
+        ],
+        "permissions": [
+            "android.permission.USE_BIOMETRIC",
+            "android.permission.USE_FINGERPRINT"
+        ]
     },
     "ios": {
         "minimumVersion": "15.0",
-        "sourceDirs": ["ios/Sources"],
-        "frameworks": ["Security"]
+        "sourceDirs": [
+            "ios/Sources"
+        ],
+        "frameworks": [
+            "Security",
+            "LocalAuthentication"
+        ],
+        "usageDescriptions": {
+            "NSFaceIDUsageDescription": "Authenticate to unlock your account."
+        }
     },
     "idl": "pam-native.idl.json",
-    "modules": [{"name": "auth.vault", "class": "dev.pam.auth.AuthVaultModule", "iosClass": "AuthVaultModule"}],
+    "modules": [
+        {
+            "name": "auth.vault",
+            "class": "dev.pam.auth.AuthVaultModule",
+            "iosClass": "AuthVaultModule"
+        },
+        {
+            "name": "auth.biometrics",
+            "class": "dev.pam.auth.BiometricsModule",
+            "iosClass": "BiometricsModule"
+        },
+        {
+            "name": "auth.privacy",
+            "class": "dev.pam.auth.ScreenPrivacyModule",
+            "iosClass": "ScreenPrivacyModule"
+        }
+    ],
     "views": []
 }
