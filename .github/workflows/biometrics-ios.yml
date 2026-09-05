@@ -99,7 +99,8 @@ jobs:
           xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
             -destination "platform=iOS Simulator,id=${simulator_id}" \
             -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
-            -resultBundlePath "$RUNNER_TEMP/PamAuthHost-UI.xcresult" CODE_SIGNING_ALLOWED=NO test
+            -resultBundlePath "$RUNNER_TEMP/PamAuthHost-UI.xcresult" \
+            ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO test
       - name: Preserve native test results
         if: always()
         uses: actions/upload-artifact@v4
