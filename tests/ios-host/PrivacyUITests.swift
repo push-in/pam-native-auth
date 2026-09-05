@@ -29,7 +29,8 @@ final class PrivacyUITests: XCTestCase {
         let authentication = XCUIApplication(bundleIdentifier: "com.apple.CoreAuthUI")
         let prompt = authentication.otherElements["authentication_ui"]
         XCTAssertTrue(prompt.waitForExistence(timeout: 10))
-        let cancel = authentication.buttons["Cancel"]
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let cancel = springboard.alerts["Face Not Recognized"].buttons["Cancel"]
         guard cancel.waitForExistence(timeout: 15) else {
             print("AUTH HIERARCHY: \(authentication.debugDescription)")
             print("APP HIERARCHY: \(app.debugDescription)")
