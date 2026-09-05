@@ -20,6 +20,25 @@ final class PrivacyUITests: XCTestCase {
         waitForExpectations(timeout: 25)
     }
 
+    func testSystemBiometricsCancellationDoesNotAuthenticate() {
+        let app = XCUIApplication()
+        app.launch()
+        let authenticate = app.buttons["authenticate"]
+        XCTAssertTrue(authenticate.waitForExistence(timeout: 10))
+        authenticate.tap()
+        let cancel = app.buttons["Cancel"]
+        let systemCancel = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Cancel"]
+        if cancel.waitForExistence(timeout: 5) {
+            cancel.tap()
+        } else {
+            XCTAssertTrue(systemCancel.waitForExistence(timeout: 5))
+            systemCancel.tap()
+        }
+        let result = app.staticTexts["result"]
+        expectation(for: NSPredicate(format: "label == %@", "Biometric result: 2"), evaluatedWith: result)
+        waitForExpectations(timeout: 10)
+    }
+
     func testBackgroundReturnKeepsReferenceContentCovered() {
         let app = XCUIApplication()
         app.launchArguments = ["--keep-covered-on-return"]

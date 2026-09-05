@@ -100,6 +100,16 @@ jobs:
             -destination "platform=iOS Simulator,id=${simulator_id}" \
             -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
             -resultBundlePath "$RUNNER_TEMP/PamAuthHost-UI.xcresult" \
+            -skip-testing:PamAuthHostUITests/PrivacyUITests/testSystemBiometricsCancellationDoesNotAuthenticate \
+            ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO test
+      - name: Verify system biometric cancellation without simulated matches
+        run: |
+          simulator_id=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          xcodebuild -project ios-host/PamAuthHost.xcodeproj -scheme PamAuthHost \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -derivedDataPath "$RUNNER_TEMP/PamAuthHost" \
+            -resultBundlePath "$RUNNER_TEMP/PamAuthHost-Cancel.xcresult" \
+            -only-testing:PamAuthHostUITests/PrivacyUITests/testSystemBiometricsCancellationDoesNotAuthenticate \
             ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO test
       - name: Preserve native test results
         if: always()
@@ -109,5 +119,6 @@ jobs:
           path: |
             ${{ runner.temp }}/PamAuth.xcresult
             ${{ runner.temp }}/PamAuthHost-UI.xcresult
+            ${{ runner.temp }}/PamAuthHost-Cancel.xcresult
           if-no-files-found: warn
           retention-days: 7
