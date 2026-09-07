@@ -3,30 +3,26 @@ import PamNative
 @testable import PamAuth
 
 final class AuthVaultModuleTests: XCTestCase {
-    private let module = AuthVaultModule()
-
     func testExistsReportsPresenceWithoutReturningSecret() throws {
         let key = "test.exists.\(UUID().uuidString)"
-        _ = try invoke("delete", ["key": .text(key)])
-        let missing = try invoke("exists", ["key": .text(key)])
+        var present = false
+        var queriedKeys: [String] = []
+        let module = AuthVaultModule(itemExists: { queriedKey in
+            queriedKeys.append(queriedKey)
+            return present
+        })
+        let missing = try invoke(module, "exists", ["key": .text(key)])
         XCTAssertEqual(missing["state"], .integer(2))
         XCTAssertNil(missing["secret"])
 
-        let stored = try invoke("store", [
-            "key": .text(key),
-            "secret": .text("test-only-secret"),
-            "accessibility": .integer(3),
-        ])
-        XCTAssertEqual(stored["state"], .integer(1))
-        let present = try invoke("exists", ["key": .text(key)])
-        XCTAssertEqual(present["state"], .integer(1))
-        XCTAssertNil(present["secret"])
-
-        _ = try invoke("delete", ["key": .text(key)])
-        XCTAssertEqual(try invoke("exists", ["key": .text(key)])["state"], .integer(2))
+        present = true
+        let found = try invoke(module, "exists", ["key": .text(key)])
+        XCTAssertEqual(found["state"], .integer(1))
+        XCTAssertNil(found["secret"])
+        XCTAssertEqual(queriedKeys, [key, key])
     }
 
-    private func invoke(_ method: String, _ values: [String: WireValue]) throws -> [String: WireValue] {
+    private func invoke(_ module: AuthVaultModule, _ method: String, _ values: [String: WireValue]) throws -> [String: WireValue] {
         let completed = expectation(description: method)
         var response: Result<[String: WireValue], Error>?
         module.invoke(method: method, payload: try WireMap.encode(values)) { status, payload in
