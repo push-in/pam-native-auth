@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AuthVaultModuleTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val key = "test.session"
+    private val key = "test.session." + System.nanoTime()
     private fun invoke(module: AuthVaultModule, method: String, secret: String? = null): Pair<ModuleResultStatus, ByteArray> {
         val values = mutableMapOf<String, WireValue>("key" to WireValue.Text(key), "accessibility" to WireValue.Integer(3))
         secret?.let { values["secret"] = WireValue.Text(it) }
@@ -27,7 +27,11 @@ class AuthVaultModuleTest {
     fun persistsEncryptedAcrossModuleInstancesAndDeletes() {
         val secret = "test-only-session-" + System.nanoTime()
         val first = AuthVaultModule(context)
+        val missing = invoke(first, "exists")
+        assertEquals(String(missing.second), ModuleResultStatus.SUCCESS, missing.first)
+        assertEquals(WireValue.Integer(2), WireMap.decode(missing.second)["state"])
         assertEquals(ModuleResultStatus.SUCCESS, invoke(first, "store", secret).first)
+        assertEquals(WireValue.Integer(1), WireMap.decode(invoke(first, "exists").second)["state"])
         val preferences = context.getSharedPreferences("dev.pam.auth.vault", Context.MODE_PRIVATE)
         assertFalse(preferences.all.values.any { it.toString().contains(secret) })
         val second = AuthVaultModule(context)
@@ -35,6 +39,7 @@ class AuthVaultModuleTest {
         assertEquals(ModuleResultStatus.SUCCESS, recovered.first)
         assertEquals(WireValue.Text(secret), WireMap.decode(recovered.second)["secret"])
         assertEquals(ModuleResultStatus.SUCCESS, invoke(second, "delete").first)
+        assertEquals(WireValue.Integer(2), WireMap.decode(invoke(second, "exists").second)["state"])
         assertEquals(WireValue.Integer(2), WireMap.decode(invoke(first, "retrieve").second)["state"])
     }
 

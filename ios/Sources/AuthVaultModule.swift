@@ -4,8 +4,15 @@ import Security
 
 public final class AuthVaultModule: NativeModule, @unchecked Sendable {
     private let service = "dev.pam.auth.vault"
+    private let itemExists: (String) throws -> Bool
 
-    public init() {}
+    public init() {
+        self.itemExists = { key in try Self.keychainContains(key: key) }
+    }
+
+    init(itemExists: @escaping (String) throws -> Bool) {
+        self.itemExists = itemExists
+    }
 
     public func invoke(method: String, payload: Data, completion: @escaping ModuleCompletion) {
         do {
@@ -24,6 +31,8 @@ public final class AuthVaultModule: NativeModule, @unchecked Sendable {
                 } else {
                     complete(["state": .integer(2)], completion)
                 }
+            case "exists":
+                complete(["state": .integer(try itemExists(key) ? 1 : 2)], completion)
             case "delete":
                 complete(["state": .integer(try delete(key: key) ? 1 : 2)], completion)
             default:
@@ -59,6 +68,19 @@ public final class AuthVaultModule: NativeModule, @unchecked Sendable {
 
     private func delete(key: String) throws -> Bool {
         let status = SecItemDelete(baseQuery(key: key) as CFDictionary)
+        if status == errSecItemNotFound { return false }
+        guard status == errSecSuccess else { throw VaultError.security(status) }
+        return true
+    }
+
+    private static func keychainContains(key: String) throws -> Bool {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "dev.pam.auth.vault",
+            kSecAttrAccount as String: key,
+        ]
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
         if status == errSecItemNotFound { return false }
         guard status == errSecSuccess else { throw VaultError.security(status) }
         return true

@@ -34,6 +34,15 @@ final class AuthVault
         });
     }
 
+    /** Check for a credential without returning or decrypting its secret.
+     * @param Closure(AuthOperationState, ?string): void $complete
+     */
+    public function exists(string $key, Closure $complete): int
+    {
+        $this->assertKey($key);
+        return $this->operation('exists', ['key' => $key], $complete);
+    }
+
     /** @param Closure(AuthOperationState, ?string): void $complete */
     public function delete(string $key, Closure $complete): int
     {
