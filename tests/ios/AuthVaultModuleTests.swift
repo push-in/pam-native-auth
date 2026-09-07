@@ -31,7 +31,9 @@ final class AuthVaultModuleTests: XCTestCase {
         var response: Result<[String: WireValue], Error>?
         module.invoke(method: method, payload: try WireMap.encode(values)) { status, payload in
             do {
-                guard status == .success else { throw VaultTestError.failed }
+                guard status == .success else {
+                    throw VaultTestError.failed(String(data: payload, encoding: .utf8) ?? "unknown native error")
+                }
                 response = .success(try WireMap.decode(payload))
             } catch {
                 response = .failure(error)
@@ -43,4 +45,4 @@ final class AuthVaultModuleTests: XCTestCase {
     }
 }
 
-private enum VaultTestError: Error { case failed }
+private enum VaultTestError: Error { case failed(String) }
