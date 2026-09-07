@@ -28,7 +28,7 @@ class AuthVaultModuleTest {
         val secret = "test-only-session-" + System.nanoTime()
         val first = AuthVaultModule(context)
         val missing = invoke(first, "exists")
-        assertEquals(ModuleResultStatus.SUCCESS, missing.first)
+        assertEquals(String(missing.second), ModuleResultStatus.SUCCESS, missing.first)
         assertEquals(WireValue.Integer(2), WireMap.decode(missing.second)["state"])
         assertEquals(ModuleResultStatus.SUCCESS, invoke(first, "store", secret).first)
         assertEquals(WireValue.Integer(1), WireMap.decode(invoke(first, "exists").second)["state"])
