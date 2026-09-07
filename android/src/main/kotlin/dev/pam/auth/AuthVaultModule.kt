@@ -24,6 +24,7 @@ class AuthVaultModule(context: Context) : NativeModule {
             val values = WireMap.decode(payload)
             when (method) {
                 "store" -> store(values.text("key"), values.text("secret"))
+                "exists" -> exists(values.text("key"))
                 "retrieve" -> retrieve(values.text("key"))
                 "delete" -> delete(values.text("key"))
                 else -> error("Unknown method: $method")
@@ -51,6 +52,10 @@ class AuthVaultModule(context: Context) : NativeModule {
         val secret = cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8)
         return mapOf("state" to WireValue.Integer(1), "secret" to WireValue.Text(secret))
     }
+
+    private fun exists(key: String): Map<String, WireValue> = mapOf(
+        "state" to WireValue.Integer(if (preferences.contains(storageKey(key))) 1 else 2),
+    )
 
     private fun delete(key: String): Map<String, WireValue> {
         val storageKey = storageKey(key)

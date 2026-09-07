@@ -93,7 +93,7 @@ Use `pam packages` to inspect availability and `pam remove auth` to uninstall th
 | --- | --- |
 | `Biometrics` | Check availability and request system biometric authentication. |
 | `ScreenPrivacy` | Conceal protected content until the application explicitly authorizes reveal. |
-| `AuthVault` | Store, retrieve, and delete encrypted secrets. |
+| `AuthVault` | Store, check, retrieve, and delete encrypted secrets; `exists()` never returns secret material. |
 | `Pkce` / `PkcePair` | Generate and verify OAuth 2.1 S256 PKCE material. |
 | `CredentialAccessibility` | Choose the native credential accessibility policy. |
 | `AuthOperationState` | Typed result state for vault operations. |

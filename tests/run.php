@@ -52,6 +52,24 @@ $test('vault validates keys and secrets before crossing the bridge', static func
     }
 });
 
+$test('vault existence checks never request the secret', static function () use ($assert): void {
+    $transport = new class implements NativeModuleTransport {
+        public string $method = '';
+        public array $payload = [];
+        public function invoke(int $requestId, string $module, string $method, string $payload, Closure $complete): void {
+            $this->method = $method;
+            $this->payload = Wire::decodeMap($payload);
+            $complete(ModuleResultStatus::Success, Wire::map(['state' => 1]));
+        }
+    };
+    NativeModules::useTransport($transport);
+    $state = null;
+    (new AuthVault())->exists('session.primary', static function (AuthOperationState $value) use (&$state): void { $state = $value; });
+    $assert($transport->method === 'exists');
+    $assert($transport->payload === ['key' => 'session.primary']);
+    $assert($state === AuthOperationState::Succeeded);
+});
+
 $failed = 0;
 foreach ($tests as $name => $run) {
     try { $run(); fwrite(STDOUT, "PASS {$name}\n"); }

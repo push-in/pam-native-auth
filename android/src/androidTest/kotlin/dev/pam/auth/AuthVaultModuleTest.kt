@@ -27,7 +27,9 @@ class AuthVaultModuleTest {
     fun persistsEncryptedAcrossModuleInstancesAndDeletes() {
         val secret = "test-only-session-" + System.nanoTime()
         val first = AuthVaultModule(context)
+        assertEquals(WireValue.Integer(2), WireMap.decode(invoke(first, "exists").second)["state"])
         assertEquals(ModuleResultStatus.SUCCESS, invoke(first, "store", secret).first)
+        assertEquals(WireValue.Integer(1), WireMap.decode(invoke(first, "exists").second)["state"])
         val preferences = context.getSharedPreferences("dev.pam.auth.vault", Context.MODE_PRIVATE)
         assertFalse(preferences.all.values.any { it.toString().contains(secret) })
         val second = AuthVaultModule(context)
@@ -35,6 +37,7 @@ class AuthVaultModuleTest {
         assertEquals(ModuleResultStatus.SUCCESS, recovered.first)
         assertEquals(WireValue.Text(secret), WireMap.decode(recovered.second)["secret"])
         assertEquals(ModuleResultStatus.SUCCESS, invoke(second, "delete").first)
+        assertEquals(WireValue.Integer(2), WireMap.decode(invoke(second, "exists").second)["state"])
         assertEquals(WireValue.Integer(2), WireMap.decode(invoke(first, "retrieve").second)["state"])
     }
 

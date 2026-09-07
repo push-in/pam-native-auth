@@ -24,6 +24,8 @@ public final class AuthVaultModule: NativeModule, @unchecked Sendable {
                 } else {
                     complete(["state": .integer(2)], completion)
                 }
+            case "exists":
+                complete(["state": .integer(try exists(key: key) ? 1 : 2)], completion)
             case "delete":
                 complete(["state": .integer(try delete(key: key) ? 1 : 2)], completion)
             default:
@@ -59,6 +61,15 @@ public final class AuthVaultModule: NativeModule, @unchecked Sendable {
 
     private func delete(key: String) throws -> Bool {
         let status = SecItemDelete(baseQuery(key: key) as CFDictionary)
+        if status == errSecItemNotFound { return false }
+        guard status == errSecSuccess else { throw VaultError.security(status) }
+        return true
+    }
+
+    private func exists(key: String) throws -> Bool {
+        var query = baseQuery(key: key)
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
         if status == errSecItemNotFound { return false }
         guard status == errSecSuccess else { throw VaultError.security(status) }
         return true
