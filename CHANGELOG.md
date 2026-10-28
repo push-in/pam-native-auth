@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Align AppCompat 1.7.1 with the host test configuration so biometric dependencies do not force an older test classpath.
+
 ## 0.4.0
 
 - Owns the optional biometric compatibility capability extracted from the 1.46 core.

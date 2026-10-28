@@ -16,7 +16,8 @@
             "android/src/main/kotlin"
         ],
         "dependencies": [
-            "androidx.biometric:biometric:1.1.0"
+            "androidx.biometric:biometric:1.1.0",
+            "androidx.appcompat:appcompat:1.7.1"
         ],
         "permissions": [
             "android.permission.USE_BIOMETRIC",
