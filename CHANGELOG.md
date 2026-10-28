@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Owns the optional biometric compatibility capability extracted from the 1.46 core.
+- Preserves PHP aliases and native contracts during migration.
+
+
 ## Unreleased
 
 ## 0.3.2 - 2026-09-06

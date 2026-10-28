@@ -137,3 +137,10 @@ These primitives do not implement an application session gate or cryptographical
 - [Biometrics API](docs/biometrics.md)
 - [Screen privacy API and lifecycle](docs/screen-privacy.md)
 - [Native validation evidence and limitations](docs/native-validation.md)
+
+
+## Core extraction (1.46)
+
+Requires `pushinbr/pam-native` ^1.46. Install with `composer require pushinbr/pam-native-auth`.
+The core keeps deprecated PHP aliases through 1.46; they are removed in 1.47.
+Native wire contracts are retained. Swift compilation and device QA remain pending.

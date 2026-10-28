@@ -17,11 +17,16 @@ import dev.pam.nativeapp.protocol.WireMap
 import dev.pam.nativeapp.protocol.WireValue
 
 class BiometricsModule(private val context: Context) : NativeModule, AutoCloseable {
+    private val compatibility by lazy { PlatformBiometricsCompatibility(context) }
     private val main = Handler(Looper.getMainLooper())
     private var closed = false
     private var cancelActive: (() -> Unit)? = null
 
     override fun invoke(method: String, payload: ByteArray, completion: ModuleCompletion) {
+        if (method == "legacy.status" || method == "legacy.authenticate") {
+            compatibility.invoke(method.removePrefix("legacy."), payload, completion)
+            return
+        }
         main.post {
             if (closed) {
                 if (method == "availability") complete(completion, "availability", Availability.UNAVAILABLE.code)

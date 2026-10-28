@@ -4,6 +4,7 @@ import PamNative
 import UIKit
 
 public final class BiometricsModule: NativeModule, @unchecked Sendable {
+    private let compatibility = PlatformBiometricsCompatibility()
     private var active: LAContext?
     private var cancellation: (() -> Void)?
     private var backgroundObserver: NSObjectProtocol?
@@ -11,6 +12,10 @@ public final class BiometricsModule: NativeModule, @unchecked Sendable {
     public init() {}
 
     public func invoke(method: String, payload: Data, completion: @escaping ModuleCompletion) {
+        if method == "legacy.status" || method == "legacy.authenticate" {
+            compatibility.invoke(method: String(method.dropFirst(7)), payload: payload, completion: completion)
+            return
+        }
         DispatchQueue.main.async { [self] in
             do {
                 let values = try WireMap.decode(payload)
