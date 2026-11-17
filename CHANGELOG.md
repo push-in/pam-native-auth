@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2 - 2026-11-17
+
+- Fixed: `Biometrics::authenticate()` (`auth.biometrics`) on Android 9+ uses
+  the platform BiometricPrompt, as the `biometrics` compatibility module does.
+  With androidx.biometric's fragment-hosted prompt, pressing the cancel button
+  on One UI 4 (Android 12, Galaxy S10) closed the prompt without reporting the
+  error, so the PHP callback never ran and the screen stayed waiting. Success,
+  cancel (button, back, app sent to background), lockout, unavailable and
+  other errors all complete the callback; Android 8 keeps androidx.biometric.
+- Tests: platform error mapping for every outcome (instrumented).
+
 ## 0.4.1
 
 - Align AppCompat 1.7.1 with the host test configuration so biometric dependencies do not force an older test classpath.
