@@ -22,6 +22,26 @@ class BiometricsModuleTest {
     private val payload = WireMap.encode(mapOf("reason" to WireValue.Text("PAM biometric certification"), "cancelLabel" to WireValue.Text("Cancel test")))
 
     @Test
+    fun platformPromptErrorsMapToEveryOutcome() {
+        val prompt = android.hardware.biometrics.BiometricPrompt::class.java
+        fun code(name: String) = prompt.getField(name).getInt(null)
+        val expected = mapOf(
+            "BIOMETRIC_ERROR_USER_CANCELED" to 2L,
+            "BIOMETRIC_ERROR_CANCELED" to 2L,
+            "BIOMETRIC_ERROR_LOCKOUT" to 4L,
+            "BIOMETRIC_ERROR_LOCKOUT_PERMANENT" to 4L,
+            "BIOMETRIC_ERROR_NO_BIOMETRICS" to 3L,
+            "BIOMETRIC_ERROR_HW_NOT_PRESENT" to 3L,
+            "BIOMETRIC_ERROR_HW_UNAVAILABLE" to 3L,
+            "BIOMETRIC_ERROR_TIMEOUT" to 5L,
+            "BIOMETRIC_ERROR_UNABLE_TO_PROCESS" to 5L,
+        )
+        for ((name, result) in expected) {
+            assertEquals(name, result, BiometricsModule.platformResult(code(name)).code)
+        }
+    }
+
+    @Test
     fun closedModuleCannotOpenAnotherPrompt() {
         val completed = CountDownLatch(2)
         ActivityScenario.launch(PamActivity::class.java).use { scenario ->
