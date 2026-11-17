@@ -55,7 +55,7 @@ Do not store user passwords. Store short-lived sessions or refresh tokens, rotat
 
 | Platform | Support | Notes |
 | --- | --- | --- |
-| Android | API 26+ (Android 8.0) | Android Keystore + AES-GCM; `androidx.biometric` 1.1.0 |
+| Android | API 24+ (Android 7.0) | Android Keystore + AES-GCM; `androidx.biometric` 1.1.0 |
 | iOS | 15.0+ | Security.framework Keychain, LocalAuthentication |
 | PAM Native | 0.8.0 to < 2.0.0 | From `pam-native.plugin.json`; plugin protocol 1; current native certification uses SDK `1.0.16`; PHP 8.5+ |
 
