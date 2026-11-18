@@ -23,3 +23,14 @@ provided in the plugin manifest.
 
 Validation before release must include PHP contracts, Android instrumentation,
 iOS compilation, and system-prompt interaction on supported simulators/devices.
+
+## `LegacyBiometrics` (the former core module)
+
+`LegacyBiometrics::status()` and `authenticate()` accept any enrolled
+biometric (weak or strong). Android 10+ uses the platform BiometricPrompt;
+Android 7.0-9 (API 24-28), where the platform `BiometricManager` does not
+exist, uses `androidx.biometric` with `BIOMETRIC_WEAK`, so the fingerprint
+reports `BiometricKind::Fingerprint` and unlocks there too (react-native-keychain
+`BIOMETRY_ANY` parity). Before 0.4.4 those versions always reported
+`BiometricKind::None`. The prompt needs the host `FragmentActivity` in the
+foreground; otherwise the result is `BiometricError::Unavailable`.

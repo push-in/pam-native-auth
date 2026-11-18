@@ -14,9 +14,10 @@ use Pam\Native\Modules\NativeModules;
 
 /**
  * System biometric prompt: Android BiometricPrompt (Android 10+, weak or
- * strong biometrics) and iOS LocalAuthentication (Face ID / Touch ID; the app
- * must declare NSFaceIDUsageDescription). Pair it with SecureStorage for
- * anything that must stay on the device.
+ * strong biometrics; Android 7.0-9 through androidx.biometric with a weak
+ * biometric, which is the fingerprint) and iOS LocalAuthentication (Face ID /
+ * Touch ID; the app must declare NSFaceIDUsageDescription). Pair it with
+ * SecureStorage for anything that must stay on the device.
  */
 final class LegacyBiometrics
 {

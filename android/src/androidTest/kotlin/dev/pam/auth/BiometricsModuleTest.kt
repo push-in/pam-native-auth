@@ -139,4 +139,65 @@ class BiometricsModuleTest {
             assertEquals(WireValue.Integer(1), result)
         }
     }
+
+    @Test
+    fun legacyCompatErrorsMapToBiometricErrors() {
+        val prompt = androidx.biometric.BiometricPrompt::class.java
+        fun code(name: String) = prompt.getField(name).getInt(null)
+        val expected = mapOf(
+            "ERROR_LOCKOUT" to 4,
+            "ERROR_LOCKOUT_PERMANENT" to 4,
+            "ERROR_HW_NOT_PRESENT" to 3,
+            "ERROR_HW_UNAVAILABLE" to 3,
+            "ERROR_NO_BIOMETRICS" to 3,
+            "ERROR_NEGATIVE_BUTTON" to 2,
+            "ERROR_USER_CANCELED" to 2,
+            "ERROR_CANCELED" to 2,
+            "ERROR_TIMEOUT" to 2,
+        )
+        for ((name, error) in expected) {
+            assertEquals(name, error, PlatformBiometricsCompatibility.compatError(code(name)))
+        }
+    }
+
+    /** Android 7.0-9: legacy status follows androidx (weak biometric) instead of always reporting none. */
+    @Test
+    fun legacyStatusOnAndroid7To9FollowsAndroidxAvailability() {
+        assumeTrue(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q)
+        val enrolled = BiometricManager.from(ApplicationProvider.getApplicationContext())
+            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+        val completed = CountDownLatch(1)
+        var values: Map<String, WireValue> = emptyMap()
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                LegacyBiometricsModule(activity).invoke("status", ByteArray(0)) { _, data ->
+                    values = WireMap.decode(data)
+                    completed.countDown()
+                }
+            }
+            assertTrue(completed.await(10, TimeUnit.SECONDS))
+        }
+        assertEquals(WireValue.Flag(enrolled), values["available"])
+        assertEquals(WireValue.Integer(if (enrolled) 2 else 1), values["kind"])
+    }
+
+    /** Android 7.0-9 with fingerprint 1 enrolled: send `adb emu finger touch 1` while this test waits. */
+    @Test
+    fun legacyFingerprintAuthenticatesOnAndroid7To9() {
+        assumeTrue(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q)
+        assumeTrue(BiometricManager.from(ApplicationProvider.getApplicationContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS)
+        val completed = CountDownLatch(1)
+        var values: Map<String, WireValue> = emptyMap()
+        val request = WireMap.encode(mapOf("title" to WireValue.Text("PAM legacy biometric"), "cancelLabel" to WireValue.Text("Cancel test")))
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                LegacyBiometricsModule(activity).invoke("authenticate", request) { _, data ->
+                    values = WireMap.decode(data)
+                    completed.countDown()
+                }
+            }
+            assertTrue("Send enrolled fingerprint 1 to the emulator", completed.await(45, TimeUnit.SECONDS))
+        }
+        assertEquals(WireValue.Flag(true), values["authenticated"])
+    }
 }
