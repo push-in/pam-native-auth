@@ -38,7 +38,9 @@ public final class BiometricsModule: NativeModule, @unchecked Sendable {
     }
 
     private func authenticate(_ values: [String: WireValue], _ completion: @escaping ModuleCompletion) {
-        guard active == nil else { complete("state", Result.busy.rawValue, completion); return }
+        // A new request replaces the visible prompt; the earlier one
+        // completes Cancelled (a hot reload re-mounts the screen that asks).
+        cancellation?()
         guard UIApplication.shared.applicationState == .active else {
             complete("state", Result.unavailable.rawValue, completion); return
         }

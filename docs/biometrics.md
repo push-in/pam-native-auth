@@ -11,7 +11,9 @@ fingerprint data, or biometric templates. Device passcode fallback is disabled.
 Applications should offer their regular authenticated sign-in after cancellation,
 lockout, or unavailable hardware. Never treat those results as success.
 
-A second request during an active prompt returns Busy. Leaving the foreground
+A second request replaces an active prompt: the earlier request completes
+Cancelled and the new prompt shows (a hot reload restarts PHP and the
+re-mounted screen asks again). Busy is no longer returned. Leaving the foreground
 cancels the active request. Unknown or malformed bridge values fail closed.
 All result codes are sequential integer enums defined by the PHP API and IDL.
 

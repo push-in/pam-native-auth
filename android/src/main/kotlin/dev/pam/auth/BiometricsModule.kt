@@ -24,6 +24,39 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
     private var closed = false
     private var cancelActive: (() -> Unit)? = null
 
+    init {
+        Reloads.track(this)
+    }
+
+    /** A hot reload is about to restart the PHP request (see [Reloads]). */
+    private fun prepareReload() {
+        main.post { cancelActive?.invoke() }
+    }
+
+    /**
+     * A hot reload restarts the PHP request: the callback waiting for an open
+     * prompt is gone with it, so the prompt answered nobody (pressing Cancel on
+     * One UI did nothing). Every live module closes its prompt first. One
+     * process-wide listener; modules are held weakly.
+     */
+    private object Reloads : dev.pam.nativeapp.HostEventListener {
+        private val modules = java.util.Collections.synchronizedSet(
+            java.util.Collections.newSetFromMap(java.util.WeakHashMap<BiometricsModule, Boolean>()),
+        )
+
+        init {
+            dev.pam.nativeapp.HostEvents.register(this)
+        }
+
+        fun track(module: BiometricsModule) { modules += module }
+
+        fun forget(module: BiometricsModule) { modules -= module }
+
+        override fun prepareReload() {
+            synchronized(modules) { modules.toList() }.forEach(BiometricsModule::prepareReload)
+        }
+    }
+
     override fun invoke(method: String, payload: ByteArray, completion: ModuleCompletion) {
         if (method == "legacy.status" || method == "legacy.authenticate") {
             compatibility.invoke(method.removePrefix("legacy."), payload, completion)
@@ -57,7 +90,12 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
     }
 
     private fun authenticate(values: Map<String, WireValue>, completion: ModuleCompletion) {
-        if (cancelActive != null) { complete(completion, "state", Result.BUSY.code); return }
+        // A new request replaces the visible prompt; the earlier request
+        // completes Cancelled. A hot reload restarts the PHP request while the
+        // prompt is open: the re-mounted screen asks again, and answering it
+        // Busy left the old prompt's result with nobody to receive it (the
+        // legacy module already replaced its prompt).
+        cancelActive?.invoke()
         val activity = context as? FragmentActivity
         if (activity == null || !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             complete(completion, "state", Result.UNAVAILABLE.code); return
@@ -167,7 +205,10 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
         }
     }
 
-    override fun close() { main.post { closed = true; cancelActive?.invoke() } }
+    override fun close() {
+        Reloads.forget(this)
+        main.post { closed = true; cancelActive?.invoke() }
+    }
 
     private fun complete(completion: ModuleCompletion, key: String, value: Long) {
         completion.complete(ModuleResultStatus.SUCCESS, WireMap.encode(mapOf(key to WireValue.Integer(value))))

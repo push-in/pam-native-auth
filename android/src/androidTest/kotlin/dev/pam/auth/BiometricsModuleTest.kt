@@ -74,27 +74,50 @@ class BiometricsModuleTest {
     }
 
     @Test
-    fun closingPromptCompletesOnceAndRejectsConcurrentRequest() {
-        val completed = CountDownLatch(1)
-        val busy = CountDownLatch(1)
-        val calls = AtomicInteger()
+    fun aNewRequestReplacesTheActivePromptAndEachCompletesOnce() {
+        val first = CountDownLatch(1)
+        val second = CountDownLatch(1)
+        val firstCalls = AtomicInteger()
+        val secondCalls = AtomicInteger()
         ActivityScenario.launch(PamActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val module = BiometricsModule(activity)
                 module.invoke("authenticate", payload) { _, data ->
-                    calls.incrementAndGet()
+                    firstCalls.incrementAndGet()
+                    // Replaced by the second request (a re-mounted screen after a hot reload).
                     assertEquals(WireValue.Integer(2), WireMap.decode(data)["state"])
-                    completed.countDown()
+                    first.countDown()
                 }
                 module.invoke("authenticate", payload) { _, data ->
-                    assertEquals(WireValue.Integer(6), WireMap.decode(data)["state"])
-                    busy.countDown()
+                    secondCalls.incrementAndGet()
+                    assertNotEquals(WireValue.Integer(6), WireMap.decode(data)["state"])
+                    second.countDown()
                 }
                 module.close()
             }
+            assertTrue(first.await(5, TimeUnit.SECONDS))
+            assertTrue(second.await(5, TimeUnit.SECONDS))
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertEquals(1, firstCalls.get())
+            assertEquals(1, secondCalls.get())
+        }
+    }
+
+    @Test
+    fun aHotReloadClosesTheOpenPrompt() {
+        val completed = CountDownLatch(1)
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                BiometricsModule(activity).invoke("authenticate", payload) { _, data ->
+                    // Cancelled before the PHP request restarts; or Unavailable
+                    // when the device has no biometrics to show a prompt for.
+                    assertTrue(WireMap.decode(data)["state"] in setOf(WireValue.Integer(2), WireValue.Integer(3)))
+                    completed.countDown()
+                }
+            }
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            dev.pam.nativeapp.HostEvents.prepareReload()
             assertTrue(completed.await(5, TimeUnit.SECONDS))
-            assertTrue(busy.await(5, TimeUnit.SECONDS))
-            assertEquals(1, calls.get())
         }
     }
 
