@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4 - 2026-11-18
+
+- Fixed: LegacyBiometrics works on Android 7.0–9 through androidx.biometric (weak biometrics, fingerprint kind).
+
 ## 0.4.3 - 2026-11-17
 
 - Android 7.0/7.1 support: the plugin declares minSdk 24 and every newer Android API it uses has a version check and fallback. Requires PAM Native 1.53.1 or later.
