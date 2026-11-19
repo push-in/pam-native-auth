@@ -121,6 +121,40 @@ class BiometricsModuleTest {
         }
     }
 
+    /** The legacy `biometrics` wire (LegacyBiometrics) is replaced and closed the same way. */
+    @Test
+    fun aNewLegacyRequestReplacesTheActivePromptAndEachCompletesOnce() {
+        val request = WireMap.encode(mapOf("title" to WireValue.Text("PAM legacy biometric"), "cancelLabel" to WireValue.Text("Cancel test")))
+        val first = CountDownLatch(1)
+        val second = CountDownLatch(1)
+        val firstCalls = AtomicInteger()
+        val secondCalls = AtomicInteger()
+        ActivityScenario.launch(PamActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val module = LegacyBiometricsModule(activity)
+                module.invoke("authenticate", request) { _, data ->
+                    firstCalls.incrementAndGet()
+                    val values = WireMap.decode(data)
+                    assertEquals(WireValue.Flag(false), values["authenticated"])
+                    // Cancelled by the replacement; Unavailable without biometrics.
+                    assertTrue(values["error"] in setOf(WireValue.Integer(2), WireValue.Integer(3)))
+                    first.countDown()
+                }
+                module.invoke("authenticate", request) { _, _ ->
+                    secondCalls.incrementAndGet()
+                    second.countDown()
+                }
+            }
+            assertTrue(first.await(5, TimeUnit.SECONDS))
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            dev.pam.nativeapp.HostEvents.prepareReload()
+            assertTrue(second.await(5, TimeUnit.SECONDS))
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertEquals(1, firstCalls.get())
+            assertEquals(1, secondCalls.get())
+        }
+    }
+
     @Test
     fun backgroundingCancelsPromptOnce() {
         assumeTrue(BiometricManager.from(ApplicationProvider.getApplicationContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS)

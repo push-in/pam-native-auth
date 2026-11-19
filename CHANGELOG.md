@@ -12,7 +12,12 @@
   answering Busy, on Android and iOS, as the legacy `biometrics` module
   already did. Reproduced and verified on the S10 (logcat: the prompt closes
   with error 5 before "Restarting PHP request for hot reload").
-- Tests: instrumented tests for replacement and reload closing.
+- Fixed: the legacy `biometrics` wire (`LegacyBiometrics`) does the same on
+  every path, including the androidx.biometric prompt on Android 7.0-9 from
+  0.4.4: a hot reload closes its prompt, and a new request answers the
+  replaced one cancelled right away (androidx.biometric shares one prompt
+  fragment per activity, so the replaced callback was not guaranteed to run).
+- Tests: instrumented tests for replacement and reload closing, on both wires.
 
 ## 0.4.4 - 2026-11-18
 

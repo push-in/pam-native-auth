@@ -19,7 +19,11 @@ import dev.pam.nativeapp.protocol.WireMap
 import dev.pam.nativeapp.protocol.WireValue
 
 class BiometricsModule(private val context: Context) : NativeModule, AutoCloseable {
-    private val compatibility by lazy { PlatformBiometricsCompatibility(context) }
+    private var legacyStarted = false
+    private val compatibility by lazy {
+        legacyStarted = true
+        PlatformBiometricsCompatibility(context)
+    }
     private val main = Handler(Looper.getMainLooper())
     private var closed = false
     private var cancelActive: (() -> Unit)? = null
@@ -31,6 +35,8 @@ class BiometricsModule(private val context: Context) : NativeModule, AutoCloseab
     /** A hot reload is about to restart the PHP request (see [Reloads]). */
     private fun prepareReload() {
         main.post { cancelActive?.invoke() }
+        // The legacy `biometrics` wire (LegacyBiometrics, Android 7.0+) too.
+        if (legacyStarted) compatibility.cancelActive()
     }
 
     /**

@@ -25,9 +25,18 @@ import dev.pam.nativeapp.protocol.WireValue
 internal class PlatformBiometricsCompatibility(context: android.content.Context) : NativeModule {
     private val activity = context as Activity
 
-    @Volatile
-    private var pending: CancellationSignal? = null
-    private var pendingCompat: androidx.biometric.BiometricPrompt? = null
+    /**
+     * Closes the open prompt and answers its request cancelled (main thread).
+     * A new request replaces the open prompt, and a hot reload closes it
+     * (BiometricsModule forwards HostEvents.prepareReload): the PHP request
+     * waiting for it is about to be gone.
+     */
+    private var cancelPending: (() -> Unit)? = null
+
+    /** Closes the open prompt, if any; its request completes cancelled. */
+    fun cancelActive() {
+        activity.runOnUiThread { cancelPending?.invoke() }
+    }
 
     override fun invoke(method: String, payload: ByteArray, completion: ModuleCompletion) {
         runCatching {
@@ -58,17 +67,22 @@ internal class PlatformBiometricsCompatibility(context: android.content.Context)
             authenticateCompat(title, subtitle, cancel, completion)
             return
         }
-        pending?.cancel()
+        cancelPending?.invoke()
         val signal = CancellationSignal()
-        pending = signal
         var settled = false
+        lateinit var close: () -> Unit
         val settle = { passed: Boolean, error: Int ->
             if (!settled) {
                 settled = true
-                if (pending === signal) pending = null
+                if (cancelPending === close) cancelPending = null
                 completion.complete(ModuleResultStatus.SUCCESS, result(passed, error))
             }
         }
+        close = {
+            settle(false, ERROR_CANCELLED)
+            signal.cancel()
+        }
+        cancelPending = close
         val executor = activity.mainExecutor
         val builder = BiometricPrompt.Builder(activity)
             .setTitle(title)
@@ -108,13 +122,17 @@ internal class PlatformBiometricsCompatibility(context: android.content.Context)
             completion.complete(ModuleResultStatus.SUCCESS, result(false, ERROR_UNAVAILABLE))
             return
         }
-        pendingCompat?.cancelAuthentication()
+        // The replaced request answers now: androidx.biometric shares one
+        // prompt fragment per activity, so the old callback is not guaranteed
+        // to run once a new prompt takes it over.
+        cancelPending?.invoke()
         var settled = false
         lateinit var prompt: androidx.biometric.BiometricPrompt
+        lateinit var close: () -> Unit
         val settle = { passed: Boolean, error: Int ->
             if (!settled) {
                 settled = true
-                if (pendingCompat === prompt) pendingCompat = null
+                if (cancelPending === close) cancelPending = null
                 completion.complete(ModuleResultStatus.SUCCESS, result(passed, error))
             }
         }
@@ -129,7 +147,11 @@ internal class PlatformBiometricsCompatibility(context: android.content.Context)
                     settle(false, compatError(errorCode))
             },
         )
-        pendingCompat = prompt
+        close = {
+            settle(false, ERROR_CANCELLED)
+            prompt.cancelAuthentication()
+        }
+        cancelPending = close
         val info = androidx.biometric.BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setNegativeButtonText(cancel)
